@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DataPulse — Analyst Simulation</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#07090f;--s1:#0c1018;--s2:#111620;--s3:#161d2a;
+  --b1:#1c2535;--b2:#243047;
+  --t1:#dce8f5;--t2:#7896b4;--t3:#334d66;
+  --amber:#f5a623;--al:rgba(245,166,35,0.12);--all:rgba(245,166,35,0.05);
+  --green:#1fd98e;--gl:rgba(31,217,142,0.1);
+  --red:#f04060;--rl:rgba(240,64,96,0.1);
+  --cyan:#2ec4f5;--purple:#a78bf5;
+}
+html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--t1);font-size:13px;overflow:hidden}
+.screen{display:none;width:100%;height:100vh;overflow:hidden}
+.screen.active{display:flex}
+
+/* ── INTRO ── */
+#intro{flex-direction:column;align-items:center;justify-content:center;padding:32px 20px;overflow-y:auto;
+  background:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(245,166,35,0.08) 0%,transparent 60%),var(--bg)}
+.logo-row{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.lmark{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,#f5a623,#f04060);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:16px;color:#000}
+.wordmark{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;letter-spacing:-1px}
+.wordmark b{color:var(--amber)}
+.eyebrow{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:3px;color:var(--t3);text-transform:uppercase;margin-bottom:28px}
+.icard{background:var(--s1);border:1px solid var(--b1);border-radius:14px;padding:22px;max-width:460px;width:100%;margin-bottom:12px;position:relative;overflow:hidden}
+.icard::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--amber),transparent);opacity:0.5}
+.irole{font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:2.5px;color:var(--amber);text-transform:uppercase;margin-bottom:8px}
+.ih{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;line-height:1.35;margin-bottom:10px}
+.ip{color:var(--t2);line-height:1.75;font-size:12.5px;margin-bottom:16px}
+.ip em{color:var(--t1);font-style:italic}.ip strong{color:var(--amber)}
+.istat-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+.istat{background:var(--s2);border:1px solid var(--b1);border-radius:7px;padding:9px;text-align:center}
+.istat-v{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;display:block;margin-bottom:1px}
+.istat-v.bad{color:var(--red)}
+.istat-l{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:1px}
+.hint{background:var(--all);border:1px solid rgba(245,166,35,0.18);border-radius:9px;padding:10px 14px;max-width:460px;width:100%;margin-bottom:16px;display:flex;gap:8px;align-items:flex-start;font-size:11.5px;color:var(--amber);line-height:1.6}
+.hint strong{color:#ffd47e}
+.btn-go{background:var(--amber);color:#000;border:none;padding:11px 28px;border-radius:8px;font-family:'Syne',sans-serif;font-size:13px;font-weight:800;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:7px}
+.btn-go:hover{background:#ffc147;transform:translateY(-2px);box-shadow:0 10px 28px rgba(245,166,35,0.3)}
+
+/* ── GAME LAYOUT ── */
+#game{flex-direction:column;height:100vh;overflow:hidden}
+
+/* Top bar — fixed height, no wrapping */
+.topbar{
+  display:grid;grid-template-columns:1fr auto 1fr;
+  align-items:center;padding:0 16px;height:44px;
+  background:var(--s1);border-bottom:1px solid var(--b1);
+  flex-shrink:0;z-index:60;
+}
+.tb-brand{display:flex;align-items:center;gap:7px;font-family:'Syne',sans-serif;font-size:13px;font-weight:800}
+.tb-brand .lm{width:20px;height:20px;border-radius:4px;background:linear-gradient(135deg,#f5a623,#f04060);display:flex;align-items:center;justify-content:center;font-size:9px;color:#000;font-weight:800}
+.tb-brand b{color:var(--amber)}
+.tb-mid{display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--t3)}
+.tb-dots{display:flex;gap:4px;align-items:center}
+.td{width:6px;height:6px;border-radius:50%;background:var(--b2);transition:all 0.35s;flex-shrink:0}
+.td.done{background:var(--t3)}.td.active{background:var(--amber);box-shadow:0 0 6px rgba(245,166,35,0.6)}
+.tb-right{display:flex;align-items:center;justify-content:flex-end;gap:6px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--t3)}
+.pips{display:flex;gap:3px}
+.pip{width:8px;height:8px;border-radius:2px;background:var(--amber);transition:all 0.25s}
+.pip.spent{background:var(--b2)}
+
+/* CEO notice bar — stays inside topbar flow, doesn't overlap */
+.ceo-bar{
+  background:var(--rl);border-bottom:1px solid rgba(240,64,96,0.25);
+  padding:6px 16px;font-size:11.5px;color:#ff8099;
+  display:flex;align-items:center;gap:8px;flex-shrink:0;
+  transform:translateY(-100%);transition:transform 0.35s ease;
+  position:relative;z-index:55;max-height:0;overflow:hidden;
+}
+.ceo-bar.show{transform:translateY(0);max-height:40px}
+
+/* Metrics strip */
+.metrics{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--b1);border-bottom:1px solid var(--b1);flex-shrink:0}
+.mc{background:var(--s1);padding:9px 14px;position:relative;overflow:hidden;cursor:default}
+.mc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--mc-color,var(--amber));transition:background 0.4s}
+.mc-lbl{font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--t3);text-transform:uppercase;margin-bottom:3px;display:flex;align-items:center;gap:4px}
+.mc-lbl .qi{width:11px;height:11px;border-radius:50%;border:1px solid var(--t3);display:inline-flex;align-items:center;justify-content:center;font-size:7px;cursor:help;flex-shrink:0}
+.mc-val{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;margin-bottom:1px;transition:color 0.4s}
+.mc-delta{font-family:'JetBrains Mono',monospace;font-size:9.5px;min-height:13px}
+.mc-delta.up{color:var(--green)}.mc-delta.dn{color:var(--red)}.mc-delta.warn{color:var(--amber)}.mc-delta.base{color:var(--t3)}
+
+/* Main body — three-column: charts | data-view | insights */
+.body{display:grid;grid-template-columns:1fr 270px 230px;flex:1;min-height:0;overflow:hidden}
+
+/* Left: charts */
+.chart-col{padding:12px;overflow-y:auto;border-right:1px solid var(--b1);display:flex;flex-direction:column;gap:9px}
+.col-hdr{font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--t3);text-transform:uppercase;margin-bottom:1px}
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cbox{background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:9px;transition:border-color 0.3s}
+.cbox-t{font-family:'JetBrains Mono',monospace;font-size:7.5px;color:var(--t2);margin-bottom:6px;letter-spacing:1px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center}
+.cbadge{font-size:7.5px;padding:1px 5px;border-radius:3px;background:var(--b1);color:var(--t3)}
+.cbadge.live{background:var(--gl);color:var(--green);border:1px solid rgba(31,217,142,0.2)}
+.fw{grid-column:1/-1}
+canvas{width:100%!important;max-height:110px!important}
+
+/* Middle: data view */
+.data-col{border-right:1px solid var(--b1);display:flex;flex-direction:column;overflow:hidden}
+.data-tabs{display:flex;gap:0;border-bottom:1px solid var(--b1);flex-shrink:0}
+.dtab{flex:1;padding:7px 4px;font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);background:var(--s1);border:none;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;text-align:center}
+.dtab.active{color:var(--amber);border-bottom-color:var(--amber);background:var(--s2)}
+.dtab:hover:not(.active){color:var(--t2);background:var(--s2)}
+.data-view{flex:1;overflow-y:auto;padding:10px}
+
+/* Data table styles */
+.dtable{width:100%;border-collapse:collapse;font-size:11px}
+.dtable th{font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);padding:5px 8px;text-align:left;border-bottom:1px solid var(--b1)}
+.dtable td{padding:6px 8px;border-bottom:1px solid var(--b1);color:var(--t1);font-family:'JetBrains Mono',monospace;font-size:10.5px}
+.dtable tr:last-child td{border-bottom:none}
+.dtable tr:hover td{background:rgba(28,37,53,0.5)}
+.dtable .good{color:var(--green)}.dtable .bad{color:var(--red)}.dtable .warn{color:var(--amber)}
+.dtable .dim{color:var(--t3)}
+.dtable .sub{font-size:9px;color:var(--t3);display:block;margin-top:1px}
+.locked-row{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px 16px;text-align:center;color:var(--t3)}
+.locked-row .li{font-size:22px;margin-bottom:2px}
+.locked-row p{font-size:12px;line-height:1.6}
+.locked-row strong{color:var(--t2)}
+.concept-card{background:var(--s2);border:1px solid var(--b1);border-radius:7px;padding:10px 12px;margin-bottom:8px}
+.concept-card h4{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--t1);margin-bottom:4px}
+.concept-card p{font-size:11px;color:var(--t2);line-height:1.6}
+.concept-card .formula{font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--s3);padding:4px 8px;border-radius:4px;margin-top:5px;color:var(--amber)}
+.trend-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--b1);font-size:11px}
+.trend-row:last-child{border-bottom:none}
+.trend-k{color:var(--t2);font-family:'JetBrains Mono',monospace;font-size:9.5px}
+.trend-v{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700}
+.trend-bar-wrap{flex:1;margin:0 8px;height:4px;background:var(--b1);border-radius:2px;overflow:hidden}
+.trend-bar{height:4px;border-radius:2px;background:var(--amber);transition:width 0.5s ease}
+
+/* Right: insights — fixed height with own scroll */
+.ins-col{display:flex;flex-direction:column;overflow:hidden}
+.ins-hdr{padding:8px 10px;border-bottom:1px solid var(--b1);font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--t3);text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.ins-badge{background:var(--al);color:var(--amber);font-size:8.5px;padding:2px 5px;border-radius:3px;display:none}
+.ins-scroll{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:6px}
+.ins-empty{border:1px dashed var(--b1);border-radius:8px;padding:16px 10px;text-align:center;color:var(--t3);font-size:11px;line-height:1.7}
+.ins-empty strong{color:var(--t2)}
+.icard2{background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:9px;animation:fadeUp 0.3s ease;flex-shrink:0}
+.icard2.fresh{border-color:rgba(245,166,35,0.4);background:var(--all)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.itag{font-family:'JetBrains Mono',monospace;font-size:7.5px;letter-spacing:1.5px;color:var(--amber);text-transform:uppercase;margin-bottom:3px}
+.ibody{font-size:11px;color:var(--t1);line-height:1.55;margin-bottom:5px}
+.irows{display:flex;flex-direction:column;gap:3px}
+.irow{display:flex;justify-content:space-between;align-items:center;font-family:'JetBrains Mono',monospace;font-size:9px}
+.irow .ik{color:var(--t3)}.irow .iv{font-weight:700}
+.irow .iv.good{color:var(--green)}.irow .iv.bad{color:var(--red)}.irow .iv.warn{color:var(--amber)}
+
+/* Guidance strip */
+.guidance{
+  padding:6px 14px;background:var(--all);
+  border-top:1px solid rgba(245,166,35,0.15);
+  display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--amber);
+  flex-shrink:0;transition:all 0.25s;
+}
+.guidance.green-mode{background:rgba(31,217,142,0.04);border-color:rgba(31,217,142,0.18);color:var(--green)}
+
+/* Action bar — always visible at bottom, feedback goes ABOVE it */
+.action-area{flex-shrink:0;background:var(--s1);border-top:1px solid var(--b1)}
+
+/* Feedback panel — sits inside action-area, above buttons */
+.fb-panel{
+  max-height:0;overflow:hidden;
+  transition:max-height 0.38s cubic-bezier(0.34,1.25,0.64,1);
+  border-bottom:0px solid var(--b1);
+}
+.fb-panel.open{max-height:88px;border-bottom-width:1px}
+.fb-inner{padding:9px 14px;display:grid;grid-template-columns:130px 1fr 1fr;gap:14px}
+.fb-lbl{font-family:'JetBrains Mono',monospace;font-size:7.5px;letter-spacing:1.5px;color:var(--amber);text-transform:uppercase;margin-bottom:3px}
+.fb-aname{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--t1)}
+.fb-txt{font-size:11px;color:var(--t2);line-height:1.55}
+.fb-close{position:absolute;right:12px;top:8px;background:none;border:none;color:var(--t3);font-size:15px;cursor:pointer;transition:color 0.2s}
+.fb-close:hover{color:var(--t1)}
+.fb-rel{position:relative}
+
+.action-btns-wrap{padding:8px 14px;display:flex;align-items:center;gap:8px}
+.abt-left{font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:1.5px;color:var(--t3);text-transform:uppercase;white-space:nowrap;flex-shrink:0}
+.abt-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;flex:1}
+.abtn{background:var(--s2);border:1px solid var(--b1);border-radius:7px;padding:7px 6px 5px;cursor:pointer;transition:all 0.18s;text-align:left;position:relative}
+.abtn:hover:not(:disabled){background:var(--s3);border-color:var(--b2);transform:translateY(-1px)}
+.abtn:disabled{opacity:0.22;cursor:not-allowed}
+.abtn.glow{border-color:rgba(245,166,35,0.55);background:var(--all);animation:gp 2s infinite}
+@keyframes gp{0%,100%{border-color:rgba(245,166,35,0.3)}50%{border-color:rgba(245,166,35,0.7)}}
+.abtn.used-this-turn{border-color:var(--b2);opacity:0.35;cursor:not-allowed}
+.abtn-i{font-size:14px;display:block;margin-bottom:2px}
+.abtn-n{font-family:'Syne',sans-serif;font-size:10px;font-weight:700;color:var(--t1);display:block;line-height:1.2;margin-bottom:1px}
+.abtn-d{font-size:8.5px;color:var(--t3);display:block;line-height:1.25}
+.abtn-cost{position:absolute;top:4px;right:5px;font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--amber)}
+.end-btn{background:transparent;border:1px solid var(--b2);color:var(--t3);padding:0 14px;height:100%;min-height:52px;border-radius:7px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;cursor:pointer;transition:all 0.2s;white-space:nowrap;flex-shrink:0}
+.end-btn:hover{border-color:var(--t2);color:var(--t2)}
+.end-btn.rdy{border-color:var(--amber);color:var(--amber);animation:ep 2s infinite}
+@keyframes ep{0%,100%{box-shadow:0 0 0 0 rgba(245,166,35,0.2)}50%{box-shadow:0 0 0 3px rgba(245,166,35,0)}}
+
+/* ── END SCREEN ── */
+#endscreen{flex-direction:column;align-items:center;padding:32px 20px;overflow-y:auto;
+  background:radial-gradient(ellipse 60% 40% at 50% 100%,rgba(31,217,142,0.04) 0%,transparent 60%),var(--bg)}
+.end-ey{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:3px;color:var(--t3);text-transform:uppercase;margin-bottom:20px}
+.score-ring{width:130px;height:130px;position:relative;margin:0 auto 16px}
+.score-ring svg{transform:rotate(-90deg)}
+.score-in{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.score-n{font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:700;display:block;line-height:1}
+.score-d{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--t3)}
+.end-h{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;text-align:center;margin-bottom:3px}
+.end-s{color:var(--t2);text-align:center;font-size:12.5px;margin-bottom:20px}
+.score-cards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;max-width:480px;width:100%;margin-bottom:14px}
+.sc{background:var(--s1);border:1px solid var(--b1);border-radius:9px;padding:12px;text-align:center}
+.sc-v{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;display:block;margin-bottom:1px}
+.sc-l{font-size:9.5px;color:var(--t3);text-transform:uppercase;letter-spacing:1px}
+.sc-s{font-size:9.5px;color:var(--t3);margin-top:2px}
+.deb-sec{max-width:480px;width:100%;margin-bottom:14px}
+.deb-hdr{font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:2px;color:var(--t3);text-transform:uppercase;margin-bottom:9px;display:flex;align-items:center;gap:7px}
+.deb-hdr::after{content:'';flex:1;height:1px;background:var(--b1)}
+.path-wrap{background:var(--s1);border:1px solid var(--b1);border-radius:10px;overflow:hidden}
+.pstep{display:flex;align-items:stretch;border-bottom:1px solid var(--b1)}
+.pstep:last-child{border-bottom:none}
+.pstep-l{width:36px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--s2);border-right:1px solid var(--b1);padding:8px 0;flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--t3)}
+.pstep-i{font-size:13px;margin-bottom:2px}
+.pstep-c{padding:9px 11px;flex:1}
+.pstep-a{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--t1);margin-bottom:2px}
+.pstep-o{font-size:11px;color:var(--t2);line-height:1.5;margin-bottom:3px}
+.ptag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:8px;padding:2px 6px;border-radius:3px;letter-spacing:0.5px}
+.ptag.good{background:var(--gl);color:var(--green);border:1px solid rgba(31,217,142,0.2)}
+.ptag.bad{background:var(--rl);color:var(--red);border:1px solid rgba(240,64,96,0.2)}
+.ptag.neutral{background:var(--al);color:var(--amber);border:1px solid rgba(245,166,35,0.2)}
+.learns{background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:16px;max-width:480px;width:100%;margin-bottom:16px}
+.learns-h{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;margin-bottom:9px;display:flex;align-items:center;gap:6px}
+.litem{display:flex;gap:8px;margin-bottom:7px;font-size:11.5px;color:var(--t2);line-height:1.6;padding:8px;background:var(--s2);border-radius:6px;border-left:3px solid var(--b2)}
+.litem.ok{border-left-color:var(--green)}.litem.bad{border-left-color:var(--red)}
+.litem-i{font-size:12px;flex-shrink:0;margin-top:1px}
+.btn-replay{background:var(--amber);color:#000;border:none;padding:10px 26px;border-radius:8px;font-family:'Syne',sans-serif;font-size:13px;font-weight:800;cursor:pointer;transition:all 0.2s;margin-bottom:32px}
+.btn-replay:hover{background:#ffc147;transform:translateY(-2px)}
+
+/* ── FIRED ── */
+#firedscreen{flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;
+  background:radial-gradient(ellipse 60% 40% at 50% 50%,rgba(240,64,96,0.07) 0%,transparent 60%),var(--bg)}
+.fired-h{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:var(--red);text-align:center;margin-bottom:7px}
+.fired-s{color:var(--t2);text-align:center;font-size:13px;margin-bottom:22px;max-width:380px;line-height:1.7}
+.fired-card{background:var(--s1);border:1px solid rgba(240,64,96,0.25);border-radius:11px;padding:18px;max-width:380px;width:100%;margin-bottom:16px}
+.fired-ch{font-family:'Syne',sans-serif;font-size:12.5px;font-weight:700;color:var(--red);margin-bottom:6px}
+.fired-why{font-size:12px;color:var(--t2);line-height:1.7}
+.fired-lesson{background:rgba(240,64,96,0.05);border-left:3px solid var(--red);border-radius:0 6px 6px 0;padding:10px;margin-top:10px;font-size:11.5px;color:var(--t1);font-style:italic}
+.btn-retry{background:transparent;border:1px solid var(--red);color:var(--red);padding:10px 26px;border-radius:8px;font-family:'Syne',sans-serif;font-size:13px;font-weight:800;cursor:pointer;transition:all 0.2s}
+.btn-retry:hover{background:var(--rl)}
+
+/* scrollbar */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
+
+/* tooltip via title / custom */
+[data-tip]{position:relative;cursor:help}
+[data-tip]:hover::after{
+  content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
+  background:var(--s3);border:1px solid var(--b2);color:var(--t1);
+  font-family:'DM Sans',sans-serif;font-size:11px;line-height:1.5;padding:6px 10px;
+  border-radius:6px;width:200px;pointer-events:none;z-index:999;white-space:normal;
+  box-shadow:0 6px 20px rgba(0,0,0,0.5);
+}
+</style>
+</head>
+<body>
+
+<!-- ════ INTRO ════ -->
+<div class="screen active" id="intro">
+  <div class="logo-row">
+    <div class="lmark">D</div>
+    <div class="wordmark">Data<b>Pulse</b></div>
+  </div>
+  <div class="eyebrow">Product Analytics · Decision Simulation</div>
+  <div class="icard">
+    <div class="irole">Your Role: Junior Product Analyst — Day 1</div>
+    <div class="ih">A startup in crisis. You have 5 turns to diagnose and act.</div>
+    <div class="ip">
+      You open your laptop and pull up the dashboard. Numbers look rough.<br>
+      Message from CEO: <em>"Users are dropping off and nobody knows why. I need answers — not guesses."</em><br><br>
+      You'll explore real data tables, spot patterns, and make decisions.<br>
+      <strong>The data will tell you what to do — if you read it carefully.</strong>
+    </div>
+    <div class="istat-row">
+      <div class="istat"><span class="istat-v">₹1.2L</span><div class="istat-l">Revenue/mo</div></div>
+      <div class="istat"><span class="istat-v">12,000</span><div class="istat-l">Active Users</div></div>
+      <div class="istat"><span class="istat-v bad">18%</span><div class="istat-l">Retention ⚠</div></div>
+    </div>
+  </div>
+  <div class="hint">
+    <span style="font-size:14px;flex-shrink:0;margin-top:1px">💡</span>
+    <p><strong>How it works:</strong> Each turn you can take up to 2 actions. Open data sheets to explore — then use what you find to decide. No right answer is told to you; the data shows it.</p>
+  </div>
+  <button class="btn-go" onclick="startGame()">
+    Open Dashboard
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+</div>
+
+<!-- ════ GAME ════ -->
+<div class="screen" id="game">
+
+  <!-- Top bar: brand | turn tracker | pips -->
+  <div class="topbar">
+    <div class="tb-brand">
+      <div class="lm">D</div>Data<b>Pulse</b>
+    </div>
+    <div class="tb-mid">
+      <span id="turn-lbl">TURN 1 / 5</span>
+      <div class="tb-dots" id="turn-dots"></div>
+    </div>
+    <div class="tb-right">
+      MOVES LEFT&nbsp;
+      <div class="pips"><div class="pip" id="pip1"></div><div class="pip" id="pip2"></div></div>
+    </div>
+  </div>
+
+  <!-- CEO message — pushes content DOWN, doesn't overlap -->
+  <div class="ceo-bar" id="ceo-bar">
+    <span>💬</span><span id="ceo-txt">...</span>
+  </div>
+
+  <!-- Metrics strip -->
+  <div class="metrics">
+    <div class="mc" style="--mc-color:var(--amber)">
+      <div class="mc-lbl">Monthly Revenue <span class="qi" data-tip="Total income this month. Tied to both how many users you have AND how long they stay (retention). Fix retention → revenue follows.">?</span></div>
+      <div class="mc-val" id="v-rev">₹1,20,000</div>
+      <div class="mc-delta base" id="d-rev">— baseline</div>
+    </div>
+    <div class="mc" style="--mc-color:var(--cyan)">
+      <div class="mc-lbl">Active Users <span class="qi" data-tip="Users active this month. Falls when churn rate > new signups. You can grow this with campaigns — but only if churn is under control first.">?</span></div>
+      <div class="mc-val" id="v-usr">12,000</div>
+      <div class="mc-delta base" id="d-usr">— baseline</div>
+    </div>
+    <div class="mc" id="mc-ret" style="--mc-color:var(--red)">
+      <div class="mc-lbl">30-Day Retention <span class="qi" data-tip="% of users who return after 30 days. Industry average is ~35%. At 18%, most users are never coming back. This is the signal.">?</span></div>
+      <div class="mc-val" id="v-ret">18%</div>
+      <div class="mc-delta warn" id="d-ret">⚠ CRITICAL — industry avg 35%</div>
+    </div>
+  </div>
+
+  <!-- Body: charts | data sheets | insights -->
+  <div class="body">
+
+    <!-- Left: live charts -->
+    <div class="chart-col">
+      <div class="col-hdr">Live Charts — Update Each Turn</div>
+      <div class="cgrid">
+        <div class="cbox fw">
+          <div class="cbox-t">Metrics Over Time (indexed, day 0 = 100) <span class="cbadge live">● LIVE</span></div>
+          <canvas id="main-chart"></canvas>
+        </div>
+        <div class="cbox">
+          <div class="cbox-t">Retention % <span class="cbadge">GOAL 35%</span></div>
+          <canvas id="ret-chart"></canvas>
+        </div>
+        <div class="cbox" id="seg-wrap" style="display:none">
+          <div class="cbox-t">Churn by Segment <span class="cbadge live">NEW</span></div>
+          <canvas id="seg-chart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Middle: data sheets -->
+    <div class="data-col">
+      <div class="data-tabs">
+        <button class="dtab active" id="tab-overview" onclick="switchTab('overview')">Overview</button>
+        <button class="dtab" id="tab-cohorts" onclick="switchTab('cohorts')">Cohorts</button>
+        <button class="dtab" id="tab-funnel" onclick="switchTab('funnel')">Funnel</button>
+        <button class="dtab" id="tab-concepts" onclick="switchTab('concepts')">Concepts</button>
+      </div>
+      <div class="data-view" id="data-view"><!-- filled by JS --></div>
+    </div>
+
+    <!-- Right: insights (scrollable) -->
+    <div class="ins-col">
+      <div class="ins-hdr">
+        Findings
+        <span class="ins-badge" id="ins-badge">0</span>
+      </div>
+      <div class="ins-scroll" id="ins-scroll">
+        <div class="ins-empty">No findings yet.<br><br>Use actions to explore the data and findings will appear here.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Guidance strip -->
+  <div class="guidance" id="guidance">
+    <span>⚠</span>
+    <span id="g-txt">Retention at 18% — far below the 35% industry average. Open the <strong>Cohorts</strong> tab and start investigating.</span>
+  </div>
+
+  <!-- Action area: feedback panel (above) + buttons (below) -->
+  <div class="action-area">
+    <div class="fb-panel" id="fb-panel">
+      <div class="fb-rel">
+        <button class="fb-close" onclick="closeFB()">✕</button>
+        <div class="fb-inner">
+          <div>
+            <div class="fb-lbl">Action</div>
+            <div class="fb-aname" id="fb-name">—</div>
+          </div>
+          <div>
+            <div class="fb-lbl">Result</div>
+            <div class="fb-txt" id="fb-res">—</div>
+          </div>
+          <div>
+            <div class="fb-lbl">Analyst Note</div>
+            <div class="fb-txt" id="fb-ins">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="action-btns-wrap">
+      <div class="abt-left">ACTIONS</div>
+      <div class="abt-grid" id="abt-grid">
+        <!-- Filled by JS -->
+      </div>
+      <button class="end-btn" id="btn-end" onclick="endTurn()">END<br>TURN →</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ════ FIRED ════ -->
+<div class="screen" id="firedscreen">
+  <div class="fired-h">You were fired.</div>
+  <div class="fired-s" id="fired-s">The CEO lost confidence in your approach.</div>
+  <div class="fired-card">
+    <div class="fired-ch">What went wrong</div>
+    <div class="fired-why" id="fired-why">—</div>
+    <div class="fired-lesson" id="fired-lesson">—</div>
+  </div>
+  <button class="btn-retry" onclick="resetGame()">Try Again →</button>
+</div>
+
+<!-- ════ END ════ -->
+<div class="screen" id="endscreen">
+  <div class="end-ey">DataPulse · Simulation Complete</div>
+  <div class="score-ring">
+    <svg width="130" height="130" viewBox="0 0 130 130">
+      <circle cx="65" cy="65" r="52" fill="none" stroke="var(--s2)" stroke-width="9"/>
+      <circle id="arc" cx="65" cy="65" r="52" fill="none" stroke="var(--amber)" stroke-width="9"
+        stroke-dasharray="326.73" stroke-dashoffset="326.73"
+        stroke-linecap="round" style="transition:stroke-dashoffset 0.05s,stroke 0.3s"/>
+    </svg>
+    <div class="score-in">
+      <span class="score-n" id="score-num">0</span>
+      <span class="score-d">/100</span>
+    </div>
+  </div>
+  <div class="end-h" id="end-h">—</div>
+  <div class="end-s">Here's your debrief:</div>
+  <div class="score-cards">
+    <div class="sc"><span class="sc-v" id="sc-rev" style="color:var(--amber)">0</span><div class="sc-l">Revenue</div><div class="sc-s" id="sc-rs">—</div></div>
+    <div class="sc"><span class="sc-v" id="sc-ret" style="color:var(--purple)">0</span><div class="sc-l">Retention</div><div class="sc-s" id="sc-es">—</div></div>
+    <div class="sc"><span class="sc-v" id="sc-ins" style="color:var(--cyan)">0</span><div class="sc-l">Analysis</div><div class="sc-s" id="sc-as">—</div></div>
+  </div>
+  <div class="deb-sec">
+    <div class="deb-hdr">Your Decision Path</div>
+    <div class="path-wrap" id="path-wrap"></div>
+  </div>
+  <div class="learns deb-sec">
+    <div class="learns-h">📖 What This Run Taught You</div>
+    <div id="learn-list"></div>
+  </div>
+  <button class="btn-replay" onclick="resetGame()">Play Again →</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let G={}, charts={};
+
+function initState(){
+  G={
+    turn:1, maxTurns:5,
+    used:0, maxUsed:2, usedKeys:[],
+    log:[],
+    revenue:120000, users:12000, retention:18,
+    pRev:120000, pUsr:12000, pRet:18,
+    history:[{t:0,rev:120000,usr:12000,ret:18}],
+    retH:[18],
+    findings:0,
+    // unlock flags
+    cohortViewed:false, funnelViewed:false,
+    segmented:false, onboardFixed:false,
+    campDone:false, campBeforeFix:false,
+    featBlind:false,
+    goodCalls:0, badCalls:0,
+    currentTab:'overview',
+  };
+}
+
+// ═══════════════════════════════════════════
+// ACTIONS (6 granular actions)
+// ═══════════════════════════════════════════
+function getActions(){
+  return [
+    {
+      key:'view-cohorts', icon:'📋', name:'Open Cohorts', desc:'View retention by signup date',
+      cost:1,
+      available: ()=>true,
+      run(){
+        G.cohortViewed=true; G.goodCalls++;
+        switchTab('cohorts');
+        G.log.push({icon:'📋',action:'Opened Cohort Data',turn:G.turn,
+          outcome:'Saw that new users (<30 days) churn at 5× the rate of old users.',tag:'good',tagLabel:'Data explored'});
+        addFinding({tag:'COHORT ANALYSIS',fresh:true,
+          body:'New users churn 5× faster than retained users.',
+          rows:[{k:'New cohort (<30d) retention',v:'42%',c:'bad'},{k:'Old cohort (>30d) retention',v:'92%',c:'good'},{k:'New users = % of base',v:'60%',c:'warn'}]});
+        return{name:'Open Cohort Data',res:'Cohort table loaded. New users (signed up <30 days ago) retain at 42% vs 92% for older users.',ins:'This 5× gap is the signal. The problem isn\'t your product — it\'s something specific to new users.'};
+      }
+    },
+    {
+      key:'view-funnel', icon:'🔽', name:'Open Funnel', desc:'See where users drop off',
+      cost:1,
+      available: ()=>true,
+      run(){
+        G.funnelViewed=true; G.goodCalls++;
+        switchTab('funnel');
+        G.log.push({icon:'🔽',action:'Opened Funnel Data',turn:G.turn,
+          outcome:'Saw 68% of new users drop off at step 2 (setup). Funnel completion only 19%.',tag:'good',tagLabel:'Drop-off found'});
+        addFinding({tag:'FUNNEL ANALYSIS',fresh:true,
+          body:'68% of new users exit during setup — before they experience the product.',
+          rows:[{k:'Step 1 → 2 drop-off',v:'68%',c:'bad'},{k:'Full funnel completion',v:'19%',c:'bad'},{k:'Old user funnel completion',v:'91%',c:'good'}]});
+        return{name:'Open Funnel',res:'Funnel data loaded. 68% of new users drop off at step 2 (initial setup) before ever reaching the core feature.',ins:'They never reach the "aha moment". This is an onboarding problem, not a product problem.'};
+      }
+    },
+    {
+      key:'segment', icon:'🧩', name:'Segment Users', desc:'Split data, compare groups',
+      cost:1,
+      available: ()=>G.cohortViewed||G.funnelViewed,
+      run(){
+        if(!G.cohortViewed&&!G.funnelViewed){
+          return{name:'Segment Users',res:'Too broad without context. You need to view at least one data sheet first.',ins:'Segmentation answers "who?" — but you need to look at the data to know what question to ask.',skip:true};
+        }
+        G.segmented=true; G.goodCalls++;
+        showSegChart();
+        G.log.push({icon:'🧩',action:'Segmented Users',turn:G.turn,
+          outcome:'New users drive 80% of churn. Root cause: onboarding failure before step 2.',tag:'good',tagLabel:'Root cause confirmed'});
+        addFinding({tag:'SEGMENTATION',fresh:true,
+          body:'Root cause confirmed: new user onboarding failure drives 80% of all churn.',
+          rows:[{k:'New user monthly churn',v:'40%',c:'bad'},{k:'Old user monthly churn',v:'8%',c:'good'},{k:'Root cause',v:'Onboarding',c:'bad'}]});
+        return{name:'Segment Users',res:'Clear picture: new users (60% of your base) are churning at 40%/month, driving 80% of total churn. Old users are stable.',ins:'Now you know exactly who is churning and why. The data tells you what to build next.'};
+      }
+    },
+    {
+      key:'fix-onboarding', icon:'🛠', name:'Fix Onboarding', desc:'Rebuild the new user flow',
+      cost:1,
+      available: ()=>G.segmented||(G.cohortViewed&&G.funnelViewed),
+      run(){
+        if(!G.segmented&&!(G.cohortViewed&&G.funnelViewed)){
+          G.featBlind=true; G.badCalls++;
+          G.log.push({icon:'🛠',action:'Fix Onboarding (guessed)',turn:G.turn,
+            outcome:'Shipped a minor UI tweak. No data backing it. Minimal impact.',tag:'bad',tagLabel:'✗ Guessed'});
+          return{name:'Fix Onboarding',res:'You shipped a UI tweak without data. Users gave positive feedback but metrics barely moved.',ins:'You picked the right area by instinct — but without data you fixed the wrong part of onboarding.'};
+        }
+        G.onboardFixed=true; G.goodCalls++;
+        G.log.push({icon:'🛠',action:'Fix Onboarding (data-backed)',turn:G.turn,
+          outcome:'Rebuilt step 2 setup flow. New user churn drops from 40% → ~16%. Backed by funnel + cohort data.',tag:'good',tagLabel:'✓ Root cause fixed'});
+        addFinding({tag:'ONBOARDING FIXED',fresh:true,
+          body:'Setup flow rebuilt based on funnel data. Step 2 drop-off resolved.',
+          rows:[{k:'New user churn (before)',v:'40%',c:'bad'},{k:'New user churn (projected)',v:'~16%',c:'good'},{k:'Based on data?',v:'Yes ✓',c:'good'}]});
+        return{name:'Fix Onboarding',res:'New user setup flow rebuilt. The step 2 bottleneck (seen in the funnel) is now resolved. Retention should climb each turn.',ins:'This is product thinking: data shows where, segmentation shows who, funnel shows exactly what to fix.'};
+      }
+    },
+    {
+      key:'run-campaign', icon:'📣', name:'Run Campaign', desc:'Acquire more users',
+      cost:1,
+      available: ()=>true,
+      run(){
+        if(!G.onboardFixed){
+          G.campBeforeFix=true; G.badCalls++;
+          G.log.push({icon:'📣',action:'Campaign (before retention fix)',turn:G.turn,
+            outcome:'1,800 new signups. With 40% churn, most leave within 30 days. CAC up, LTV flat.',tag:'bad',tagLabel:'✗ Leaky bucket'});
+          addFinding({tag:'CAMPAIGN — LEAKY BUCKET',fresh:false,
+            body:'Users acquired but 40% churn means most won\'t recover their acquisition cost.',
+            rows:[{k:'New signups',v:'+1,800',c:'warn'},{k:'Expected 60d retention',v:'~1,080',c:'bad'},{k:'Retention fixed?',v:'No ✗',c:'bad'}]});
+          return{name:'Run Campaign',res:'1,800 new signups from the campaign. But with a 40% monthly churn rate, most will leave within 30 days.',ins:'Leaky bucket trap. CAC rises, LTV stays flat. You\'re paying to lose users faster. Fix retention first.'};
+        }
+        G.campDone=true; G.goodCalls++;
+        G.log.push({icon:'📣',action:'Campaign (post-fix)',turn:G.turn,
+          outcome:'2,200 new signups. With fixed onboarding, 84% expected to activate and stay.',tag:'good',tagLabel:'✓ Compounding'});
+        addFinding({tag:'CAMPAIGN — COMPOUNDING',fresh:true,
+          body:'High-quality acquisition: fixed onboarding converts new signups into retained users.',
+          rows:[{k:'New signups',v:'+2,200',c:'good'},{k:'Expected to stay (84%)',v:'~1,848',c:'good'},{k:'Onboarding fixed?',v:'Yes ✓',c:'good'}]});
+        return{name:'Run Campaign',res:'2,200 new signups. With fixed onboarding, 84% are expected to activate and stay.',ins:'Acquisition × retention = compounding growth. The foundation is now solid.'};
+      }
+    },
+    {
+      key:'power-feature', icon:'⚡', name:'Power Feature', desc:'Deepen value for core users',
+      cost:1,
+      available: ()=>G.onboardFixed,
+      run(){
+        if(!G.onboardFixed){
+          G.badCalls++;
+          return{name:'Power Feature',res:'You shipped an advanced feature. Power users liked it but retention didn\'t move.',ins:'Power features help existing users but don\'t fix why new users churn. Root cause first.'};
+        }
+        G.goodCalls++;
+        G.log.push({icon:'⚡',action:'Power Feature',turn:G.turn,
+          outcome:'Advanced analytics shipped. Old user churn drops 2%, revenue per user up 5%.',tag:'good',tagLabel:'LTV improved'});
+        addFinding({tag:'POWER FEATURE',fresh:true,
+          body:'Increases long-term value for retained users — compounding on the fixed retention base.',
+          rows:[{k:'Old user churn delta',v:'-2%',c:'good'},{k:'Revenue/user delta',v:'+5%',c:'good'}]});
+        return{name:'Power Feature',res:'Advanced analytics launched. Retained power users love it — old user churn drops 2% and revenue per user increases.',ins:'With onboarding fixed, deepening value for power users is exactly the right next move.'};
+      }
+    }
+  ];
+}
+
+// ═══════════════════════════════════════════
+// ACTION EXECUTION
+// ═══════════════════════════════════════════
+function act(key){
+  if(G.used>=G.maxUsed) return;
+  if(G.usedKeys.includes(key)) return;
+  const def=getActions().find(a=>a.key===key);
+  if(!def) return;
+  const r=def.run();
+  if(r.skip) return;
+  G.used++; G.usedKeys.push(key);
+  showFB(r.name,r.res,r.ins);
+  updatePips(); renderActions(); updateGuidance();
+}
+
+// ═══════════════════════════════════════════
+// DATA TABS
+// ═══════════════════════════════════════════
+function switchTab(tab){
+  G.currentTab=tab;
+  ['overview','cohorts','funnel','concepts'].forEach(t=>{
+    document.getElementById('tab-'+t).classList.toggle('active',t===tab);
+  });
+  renderTab();
+}
+
+function renderTab(){
+  const v=document.getElementById('data-view');
+  switch(G.currentTab){
+    case 'overview': v.innerHTML=renderOverview(); break;
+    case 'cohorts': v.innerHTML=renderCohorts(); break;
+    case 'funnel': v.innerHTML=renderFunnel(); break;
+    case 'concepts': v.innerHTML=renderConcepts(); break;
+  }
+}
+
+function renderOverview(){
+  const h=G.history, last=h[h.length-1];
+  const fmtPct=(a,b)=>{const d=a-b,s=d>=0?'+':'';return`<span class="${d>=0?'good':'bad'}">${s}${d.toFixed(1)}%</span>`;};
+  let rows='';
+  h.forEach((d,i)=>{
+    if(i===0){rows+=`<tr><td>Baseline</td><td class="dim">${fmtRev(d.rev)}</td><td class="dim">${d.usr.toLocaleString('en-IN')}</td><td class="warn">${d.ret}%</td></tr>`;return;}
+    const prev=h[i-1];
+    const dr=((d.rev-prev.rev)/prev.rev*100).toFixed(1);
+    const du=d.usr-prev.usr;
+    rows+=`<tr>
+      <td>Turn ${d.t}</td>
+      <td>${fmtRev(d.rev)} <span class="${+dr>=0?'good':'bad'}" style="font-size:9px">${dr>=0?'+':''}${dr}%</span></td>
+      <td>${d.usr.toLocaleString('en-IN')} <span class="${du>=0?'good':'bad'}" style="font-size:9px">${du>=0?'+':''}${Math.round(du)}</span></td>
+      <td class="${d.ret>=35?'good':d.ret>=25?'warn':'bad'}">${d.ret}%</td>
+    </tr>`;
+  });
+  return`<table class="dtable">
+    <thead><tr><th>Period</th><th>Revenue</th><th>Users</th><th>Retention</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div style="margin-top:10px">
+    ${G.history.length<=1?`<div class="locked-row"><div class="li">📊</div><p>Metrics will update here after each turn.<br>Use actions to start making moves.</p></div>`:''}
+  </div>`;
+}
+
+function renderCohorts(){
+  const inv=G.cohortViewed;
+  if(!inv) return`<div class="locked-row">
+    <div class="li">📋</div>
+    <p>Cohort data shows <strong>retention broken down by when users signed up</strong>.<br>Use the <strong>"Open Cohorts"</strong> action to pull this data.</p>
+  </div>`;
+  const rows=[
+    {cohort:'Apr Week 1',size:980,ret30:'91%',ret60:'84%',churn:'9%',cls:'good'},
+    {cohort:'Apr Week 2',size:860,ret30:'89%',ret60:'82%',churn:'11%',cls:'good'},
+    {cohort:'May Week 1 ⚡',size:2400,ret30:'48%',ret60:'31%',churn:'52%',cls:'bad'},
+    {cohort:'May Week 2 ⚡',size:3100,ret30:'42%',ret60:'27%',churn:'58%',cls:'bad'},
+    {cohort:'May Week 3 ⚡',size:2800,ret30:'39%',ret60:'—',churn:'61%',cls:'bad'},
+  ];
+  const trs=rows.map(r=>`<tr>
+    <td>${r.cohort}</td>
+    <td>${r.size.toLocaleString()}</td>
+    <td class="${r.cls}">${r.ret30}</td>
+    <td class="${r.cls}">${r.ret60}</td>
+    <td class="${r.cls}">${r.churn}</td>
+  </tr>`).join('');
+  return`<table class="dtable">
+    <thead><tr><th>Cohort ⚡=new</th><th>Size</th><th>Ret 30d</th><th>Ret 60d</th><th>Churn</th></tr></thead>
+    <tbody>${trs}</tbody>
+  </table>
+  <div style="padding:8px 0 0;font-size:10.5px;color:var(--t3);line-height:1.6">
+    ⚡ New cohorts (May) churn at 5–6× the rate of older ones. Old users are stable. The problem started <em>recently</em>.
+  </div>`;
+}
+
+function renderFunnel(){
+  const inv=G.funnelViewed;
+  if(!inv) return`<div class="locked-row">
+    <div class="li">🔽</div>
+    <p>The funnel shows <strong>where users drop off</strong> during onboarding.<br>Use the <strong>"Open Funnel"</strong> action to pull this data.</p>
+  </div>`;
+  const steps=[
+    {step:'1. Sign Up',newPct:100,oldPct:100,note:''},
+    {step:'2. Setup Profile ⚡',newPct:32,oldPct:98,note:'← main drop-off'},
+    {step:'3. Connect Data',newPct:24,oldPct:97,note:''},
+    {step:'4. First Dashboard',newPct:21,oldPct:95,note:''},
+    {step:'5. Core Feature',newPct:19,oldPct:91,note:'← "aha moment"'},
+  ];
+  const bars=steps.map(s=>{
+    const pct=s.newPct;
+    const barW=pct+'%';
+    const cls=pct>60?'':'bad';
+    return`<div class="trend-row">
+      <div class="trend-k" style="width:140px;flex-shrink:0">${s.step}</div>
+      <div class="trend-bar-wrap"><div class="trend-bar ${cls}" style="width:${barW};background:${pct>60?'var(--green)':pct>35?'var(--amber)':'var(--red)'}"></div></div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;width:30px;text-align:right;flex-shrink:0;color:${pct>60?'var(--green)':pct>35?'var(--amber)':'var(--red)'}">${pct}%</div>
+      <div style="font-size:9px;color:var(--t3);margin-left:6px;flex-shrink:0">${s.note}</div>
+    </div>`;
+  }).join('');
+  return`<div style="padding:4px 0">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:1.5px;color:var(--t3);text-transform:uppercase;margin-bottom:8px">New Users (% completing each step)</div>
+    ${bars}
+    <div style="margin-top:10px;font-size:10.5px;color:var(--t3);line-height:1.6">
+      ⚡ 68% of new users exit at step 2 (Setup Profile) — before reaching the product's core value. Old users pass through at 98%.
+    </div>
+  </div>`;
+}
+
+function renderConcepts(){
+  return`
+  <div class="concept-card">
+    <h4>What is Retention?</h4>
+    <p>The % of users who come back after a given period (here: 30 days). Low retention means users try your product once and leave — no matter how many you acquire.</p>
+    <div class="formula">Retention = Returning Users ÷ Total Users × 100</div>
+  </div>
+  <div class="concept-card">
+    <h4>What is Cohort Analysis?</h4>
+    <p>Grouping users by when they signed up to compare behavior over time. It reveals if a <em>recent</em> change (feature, campaign) caused the problem — or if it's systemic.</p>
+  </div>
+  <div class="concept-card">
+    <h4>What is the Leaky Bucket?</h4>
+    <p>Running acquisition campaigns with high churn is like filling a bucket with a hole in it. You spend money to acquire users who immediately leave. Fix the hole (retention) before filling the bucket.</p>
+    <div class="formula">LTV must > CAC to grow profitably</div>
+  </div>
+  <div class="concept-card">
+    <h4>Funnel Analysis</h4>
+    <p>Tracking what % of users complete each step of your onboarding. A massive drop at one specific step = fix that step. Don't guess — the funnel shows you exactly where.</p>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════
+// SIMULATION
+// ═══════════════════════════════════════════
+function simulate(){
+  const didCamp=G.usedKeys.includes('run-campaign');
+  let dRet=-0.7;
+  if(G.onboardFixed) dRet+=6;
+  if(didCamp&&!G.onboardFixed) dRet-=1.2;
+  if(didCamp&&G.onboardFixed) dRet+=0.8;
+  if(G.usedKeys.includes('power-feature')&&G.onboardFixed) dRet+=1;
+  if(G.featBlind) dRet-=0.3;
+  dRet+=(Math.random()-0.5)*1.2;
+  G.retention=Math.round(Math.max(6,Math.min(78,G.retention+dRet)));
+  const churn=Math.max(0.03,(100-G.retention)*0.01);
+  const churned=Math.round(G.users*churn);
+  const organic=Math.round(G.users*0.018);
+  let nu=G.users-churned+organic;
+  if(didCamp) nu+=G.onboardFixed?2200:1800;
+  if(G.usedKeys.includes('power-feature')&&G.onboardFixed) nu+=Math.round(G.users*0.005);
+  G.users=Math.max(3000,Math.round(nu));
+  G.revenue=Math.round(G.users*(G.retention/18)*10);
+  G.revenue=Math.max(10000,G.revenue);
+  G.retH.push(G.retention);
+}
+
+// ═══════════════════════════════════════════
+// END TURN
+// ═══════════════════════════════════════════
+function endTurn(){
+  if(G.used===0){
+    // Flash guidance
+    const g=document.getElementById('guidance');
+    g.style.background='rgba(240,64,96,0.08)';
+    setTimeout(()=>g.style.background='',600);
+    return;
+  }
+  closeFB();
+  G.pRev=G.revenue; G.pUsr=G.users; G.pRet=G.retention;
+  simulate();
+  G.history.push({t:G.turn,rev:G.revenue,usr:G.users,ret:G.retention});
+  G.turn++; G.used=0; G.usedKeys=[];
+
+  // CEO messages
+  if(!G.onboardFixed&&G.turn===3){
+    showCeo('CEO: "Numbers aren\'t improving. I need a plan based on data, not vibes."');
+  } else if(!G.onboardFixed&&G.turn===4){
+    showCeo('CEO: "Last chance. Find the root cause or we\'re making changes to the team."');
+  } else if(G.onboardFixed&&G.turn===3){
+    showCeo('CEO: "Retention is moving. Keep going — what\'s the next lever?"');
+  }
+
+  // Check fire condition
+  if(!G.onboardFixed&&G.badCalls>=2&&G.retention<=13){
+    firePlayer(); return;
+  }
+  if(G.turn>G.maxTurns){endGame();return;}
+
+  updateAll();
+}
+
+// ═══════════════════════════════════════════
+// CHARTS
+// ═══════════════════════════════════════════
+function initCharts(){
+  const mk=(id,cfg)=>new Chart(document.getElementById(id).getContext('2d'),cfg);
+  const line=(color)=>({borderWidth:2.5,tension:0.4,fill:true,pointRadius:3,pointHoverRadius:5,
+    borderColor:color,backgroundColor:color.replace('rgb(','rgba(').replace(')',',0.07)'),pointBackgroundColor:color});
+  charts.main=mk('main-chart',{type:'line',
+    data:{labels:['Start'],datasets:[
+      {label:'Revenue',...line('rgb(245,166,35)'),data:[100]},
+      {label:'Users',...line('rgb(46,196,245)'),data:[100]},
+      {label:'Retention',...line('rgb(167,139,245)'),data:[100]},
+    ]},
+    options:baseOpts('Index (Start=100)')});
+  charts.ret=mk('ret-chart',{type:'line',
+    data:{labels:['Start'],datasets:[
+      {label:'Retention %',data:[18],borderWidth:2,tension:0.4,fill:true,borderColor:'#a78bf5',backgroundColor:'rgba(167,139,245,0.08)',pointRadius:3,pointBackgroundColor:'#a78bf5'},
+      {label:'Target (35%)',data:[35],borderWidth:1,borderDash:[4,4],borderColor:'rgba(31,217,142,0.4)',pointRadius:0,fill:false},
+    ]},
+    options:baseOpts(null,0,60,true,'%')});
+}
+
+function baseOpts(yTitle,yMin,yMax,legHide,tickSuffix){
+  return{responsive:true,maintainAspectRatio:true,animation:{duration:600},
+    plugins:{legend:{display:!legHide,labels:{color:'#7896b4',font:{family:'JetBrains Mono',size:8},boxWidth:8,padding:9}},
+      tooltip:{backgroundColor:'#111620',borderColor:'#1c2535',borderWidth:1,titleColor:'#dce8f5',bodyColor:'#7896b4'}},
+    scales:{
+      x:{grid:{color:'rgba(28,37,53,0.6)'},ticks:{color:'#334d66',font:{family:'JetBrains Mono',size:8}}},
+      y:{min:yMin,max:yMax,grid:{color:'rgba(28,37,53,0.6)'},
+        title:yTitle?{display:true,text:yTitle,color:'#334d66',font:{family:'JetBrains Mono',size:7}}:{display:false},
+        ticks:{color:'#334d66',font:{family:'JetBrains Mono',size:8},callback:v=>v+(tickSuffix||'')}}}};
+}
+
+function showSegChart(){
+  document.getElementById('seg-wrap').style.display='block';
+  if(charts.seg) return;
+  charts.seg=new Chart(document.getElementById('seg-chart').getContext('2d'),{type:'bar',
+    data:{labels:['New (<30d)','Old (>30d)'],datasets:[{data:[40,8],
+      backgroundColor:['rgba(240,64,96,0.6)','rgba(31,217,142,0.6)'],
+      borderColor:['#f04060','#1fd98e'],borderWidth:2,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:true,animation:{duration:700},
+      plugins:{legend:{display:false},tooltip:{backgroundColor:'#111620',borderColor:'#1c2535',borderWidth:1,
+        titleColor:'#dce8f5',bodyColor:'#7896b4',callbacks:{label:c=>` ${c.parsed.y}% monthly churn`}}},
+      scales:{x:{grid:{display:false},ticks:{color:'#7896b4',font:{family:'DM Sans',size:10}}},
+        y:{max:50,grid:{color:'rgba(28,37,53,0.6)'},ticks:{color:'#334d66',font:{family:'JetBrains Mono',size:8},callback:v=>v+'%'}}}}});
+}
+
+function updateCharts(){
+  const h=G.history,b=h[0];
+  charts.main.data.labels=h.map((d,i)=>i===0?'Day 0':'T'+d.t);
+  charts.main.data.datasets[0].data=h.map(d=>+(d.rev/b.rev*100).toFixed(1));
+  charts.main.data.datasets[1].data=h.map(d=>+(d.usr/b.usr*100).toFixed(1));
+  charts.main.data.datasets[2].data=h.map(d=>+(d.ret/b.ret*100).toFixed(1));
+  charts.main.update();
+  charts.ret.data.labels=G.retH.map((_,i)=>i===0?'Day 0':'T'+i);
+  charts.ret.data.datasets[0].data=[...G.retH];
+  charts.ret.data.datasets[1].data=Array(G.retH.length).fill(35);
+  const col=G.retention>=35?'#1fd98e':G.retention>=25?'#f5a623':'#a78bf5';
+  charts.ret.data.datasets[0].borderColor=col; charts.ret.data.datasets[0].pointBackgroundColor=col;
+  charts.ret.update();
+}
+
+// ═══════════════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════════════
+function fmtRev(n){
+  if(n>=100000)return`₹${(n/100000).toFixed(2)}L`;
+  if(n>=1000)return`₹${Math.round(n/1000)}K`;
+  return`₹${n}`;
+}
+
+function updateMetrics(){
+  document.getElementById('v-rev').textContent=fmtRev(G.revenue);
+  document.getElementById('v-usr').textContent=G.users.toLocaleString('en-IN');
+  document.getElementById('v-ret').textContent=G.retention+'%';
+  if(G.turn>1){
+    setDelta('d-rev',G.revenue,G.pRev,v=>fmtRev(Math.abs(v)));
+    setDelta('d-usr',G.users,G.pUsr,v=>Math.abs(Math.round(v)).toLocaleString('en-IN')+' users');
+    setDelta('d-ret',G.retention,G.pRet,v=>(v>=0?'+':'')+v.toFixed(1)+' pts');
+  }
+  const mc=document.getElementById('mc-ret');
+  mc.style.setProperty('--mc-color',G.retention<20?'var(--red)':G.retention<35?'var(--amber)':'var(--green)');
+}
+function setDelta(id,cur,prev,fmt){
+  const el=document.getElementById(id),diff=cur-prev;
+  const pct=prev>0?((diff/prev)*100).toFixed(1):'0';
+  el.className='mc-delta '+(diff>=0?'up':'dn');
+  el.textContent=(diff>=0?'+':'')+pct+'% ('+( diff>=0?'+':'')+fmt(diff)+')';
+}
+function updatePips(){
+  for(let i=1;i<=2;i++) document.getElementById('pip'+i).classList.toggle('spent',G.used>=i);
+}
+function updateTurnDots(){
+  const c=document.getElementById('turn-dots'); c.innerHTML='';
+  for(let i=1;i<=G.maxTurns;i++){
+    const d=document.createElement('div');
+    d.className='td'+(i===G.turn?' active':i<G.turn?' done':'');
+    c.appendChild(d);
+  }
+  document.getElementById('turn-lbl').textContent=`TURN ${G.turn} / ${G.maxTurns}`;
+}
+
+function renderActions(){
+  const defs=getActions();
+  const grid=document.getElementById('abt-grid');
+  grid.innerHTML=defs.map(a=>{
+    const spent=G.usedKeys.includes(a.key);
+    const locked=!a.available();
+    const disabled=G.used>=G.maxUsed||spent||locked;
+    let cls='abtn'+(a.key==='view-cohorts'&&!G.cohortViewed&&!G.funnelViewed?' glow':'');
+    if(spent) cls+=' used-this-turn';
+    return`<button class="${cls}" ${disabled?'disabled':''} onclick="act('${a.key}')">
+      <span class="abtn-cost">▪</span>
+      <span class="abtn-i">${a.icon}</span>
+      <span class="abtn-n">${a.name}</span>
+      <span class="abtn-d">${locked?'🔒 Explore data first':a.desc}</span>
+    </button>`;
+  }).join('');
+  document.getElementById('btn-end').classList.toggle('rdy',G.used>0);
+}
+
+function updateGuidance(){
+  const g=document.getElementById('guidance'), t=document.getElementById('g-txt');
+  g.classList.toggle('green-mode',G.onboardFixed);
+  if(G.onboardFixed){
+    t.innerHTML=`Onboarding fixed. Retention should rise each turn. Consider <strong>Campaign</strong> to scale, or <strong>Power Feature</strong> to deepen value.`; return;
+  }
+  if(G.turn>=4&&!G.onboardFixed){
+    t.innerHTML=`⚠ Running out of turns. If you haven't yet: open <strong>Funnel</strong> data → then <strong>Fix Onboarding</strong>.`; return;
+  }
+  if(!G.cohortViewed&&!G.funnelViewed){
+    t.innerHTML=`Start by opening the <strong>Cohorts</strong> or <strong>Funnel</strong> data sheets. The numbers tell the story.`; return;
+  }
+  if(!G.segmented){
+    t.innerHTML=`You've seen the data. Now <strong>Segment Users</strong> to confirm the root cause before acting.`; return;
+  }
+  t.innerHTML=`Root cause is clear. Use <strong>Fix Onboarding</strong> to address it — then decide what to do next.`;
+}
+
+function showFB(name,res,ins){
+  document.getElementById('fb-name').textContent=name;
+  document.getElementById('fb-res').textContent=res;
+  document.getElementById('fb-ins').textContent=ins;
+  document.getElementById('fb-panel').classList.add('open');
+}
+function closeFB(){document.getElementById('fb-panel').classList.remove('open');}
+
+function showCeo(msg){
+  const el=document.getElementById('ceo-bar');
+  document.getElementById('ceo-txt').textContent=msg;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),5000);
+}
+
+function addFinding(f){
+  const scroll=document.getElementById('ins-scroll');
+  const empty=scroll.querySelector('.ins-empty');
+  if(empty) empty.remove();
+  G.findings++;
+  const b=document.getElementById('ins-badge');
+  b.style.display='block'; b.textContent=G.findings;
+  const el=document.createElement('div');
+  el.className='icard2'+(f.fresh?' fresh':'');
+  el.innerHTML=`<div class="itag">${f.tag}</div><div class="ibody">${f.body}</div>
+    <div class="irows">${(f.rows||[]).map(r=>`<div class="irow"><span class="ik">${r.k}</span><span class="iv ${r.c}">${r.v}</span></div>`).join('')}</div>`;
+  scroll.appendChild(el);
+  scroll.scrollTop=scroll.scrollHeight;
+  setTimeout(()=>el.classList.remove('fresh'),3500);
+}
+
+function updateAll(){
+  updateMetrics(); updateTurnDots(); updatePips(); renderActions();
+  updateCharts(); updateGuidance(); renderTab();
+}
+
+// ═══════════════════════════════════════════
+// FIRED
+// ═══════════════════════════════════════════
+function firePlayer(){
+  document.getElementById('game').classList.remove('active');
+  document.getElementById('firedscreen').classList.add('active');
+  const why=G.campBeforeFix&&G.badCalls>=2
+    ?'You ran acquisition campaigns before fixing retention, and made repeated guesses without opening the data. CAC rose while LTV stayed flat.'
+    :'You made decisions without exploring the data — guessing at fixes instead of diagnosing the root cause. Retention kept falling with no sign of a plan.';
+  document.getElementById('fired-why').textContent=why;
+  document.getElementById('fired-lesson').textContent=G.campBeforeFix
+    ?'Real lesson: Fill the bucket after you fix the leak. Retention first, acquisition second.'
+    :'Real lesson: Open the data first. The cohort table and funnel show you exactly what to fix.';
+  document.getElementById('fired-s').textContent='Metrics declined every turn. No root cause was identified in time.';
+}
+
+// ═══════════════════════════════════════════
+// END GAME
+// ═══════════════════════════════════════════
+function endGame(){
+  document.getElementById('game').classList.remove('active');
+  document.getElementById('endscreen').classList.add('active');
+  const base=120000,bRet=18;
+  const revS=Math.min(40,Math.round(Math.max(0,(G.revenue-base)/base)*70));
+  const retS=Math.min(30,Math.round(Math.max(0,G.retention-bRet)*1.1));
+  const insS=Math.min(30,G.goodCalls*5);
+  const total=revS+retS+insS;
+  let cur=0; const arc=document.getElementById('arc'),circ=326.73;
+  const t=setInterval(()=>{
+    cur=Math.min(cur+2,total);
+    document.getElementById('score-num').textContent=cur;
+    arc.style.strokeDashoffset=circ-(cur/100)*circ;
+    arc.style.stroke=cur>=70?'#1fd98e':cur>=42?'#f5a623':'#f04060';
+    if(cur>=total)clearInterval(t);
+  },28);
+  document.getElementById('sc-rev').textContent=revS;
+  document.getElementById('sc-ret').textContent=retS;
+  document.getElementById('sc-ins').textContent=insS;
+  document.getElementById('sc-rs').textContent=fmtRev(G.revenue)+' final';
+  document.getElementById('sc-es').textContent=G.retention+'% final';
+  document.getElementById('sc-as').textContent=G.goodCalls+' good calls';
+  const titles={h:['Root Cause Thinker','Signal > Noise','Data-Driven Analyst'],
+    m:['Getting Warmer','Partial Diagnosis','Analyst in Progress'],
+    l:['Surface Skimmer','Metrics Without Meaning','Guessing > Analyzing']};
+  const tier=total>=70?'h':total>=40?'m':'l';
+  document.getElementById('end-h').textContent=titles[tier][Math.floor(Math.random()*3)];
+  document.getElementById('path-wrap').innerHTML=G.log.length===0
+    ?'<div style="padding:12px;text-align:center;color:var(--t3);font-size:11px">No recorded decisions.</div>'
+    :G.log.map(d=>`<div class="pstep">
+      <div class="pstep-l"><div class="pstep-i">${d.icon}</div>T${d.turn}</div>
+      <div class="pstep-c">
+        <div class="pstep-a">${d.action}</div>
+        <div class="pstep-o">${d.outcome}</div>
+        <span class="ptag ${d.tag}">${d.tagLabel}</span>
+      </div></div>`).join('');
+  const items=[];
+  if(G.cohortViewed||G.funnelViewed) items.push({i:'✅',c:'ok',t:'Opening data tables before acting is the foundation of product analysis. Averages hide the truth — cohorts and funnels show it.'});
+  else items.push({i:'❌',c:'bad',t:'You didn\'t open any data tables. Good decisions come from reading the data, not instinct. The cohort table and funnel had the answer.'});
+  if(G.segmented) items.push({i:'✅',c:'ok',t:'Segmenting confirmed "new users churn 5× faster" — not just "retention is low". Specific causes lead to specific fixes.'});
+  else items.push({i:'❌',c:'bad',t:'You didn\'t segment. Segmentation turns a vague metric into a root cause. Without it, any action is a guess.'});
+  if(G.onboardFixed) items.push({i:'✅',c:'ok',t:'Fixing the root cause (onboarding) compounds over time — each new user now has a better chance of staying.'});
+  else if(G.campBeforeFix) items.push({i:'❌',c:'bad',t:'Running campaigns before fixing churn is the leaky bucket trap. Spend rises, LTV stays flat.'});
+  else items.push({i:'❌',c:'bad',t:'The root cause (onboarding failure at step 2) was never fixed. The data showed it clearly in the funnel table.'});
+  items.push({i:'💡',c:'',t:'Revenue, Users, and Retention are connected. Retention is the multiplier — fix it and acquisition becomes efficient, revenue becomes predictable.'});
+  document.getElementById('learn-list').innerHTML=items.map(i=>`<div class="litem ${i.c}"><div class="litem-i">${i.i}</div><span>${i.t}</span></div>`).join('');
+}
+
+// ═══════════════════════════════════════════
+// GAME FLOW
+// ═══════════════════════════════════════════
+function startGame(){
+  document.getElementById('intro').classList.remove('active');
+  document.getElementById('game').classList.add('active');
+  initState(); initCharts();
+  renderTab(); renderActions(); updateTurnDots(); updatePips();
+  updateGuidance();
+}
+
+function resetGame(){
+  ['endscreen','firedscreen'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  Object.values(charts).forEach(c=>{if(c)c.destroy();});
+  charts={};
+  document.getElementById('seg-wrap').style.display='none';
+  document.getElementById('ins-scroll').innerHTML='<div class="ins-empty">No findings yet.<br><br>Use actions to explore the data and findings will appear here.</div>';
+  document.getElementById('ins-badge').style.display='none';
+  document.getElementById('ceo-bar').classList.remove('show');
+  document.getElementById('fb-panel').classList.remove('open');
+  const g=document.getElementById('guidance');
+  g.classList.remove('green-mode'); g.style.background='';
+  ['d-rev','d-usr'].forEach(id=>{const el=document.getElementById(id);el.className='mc-delta base';el.textContent='— baseline';});
+  const dr=document.getElementById('d-ret'); dr.className='mc-delta warn'; dr.textContent='⚠ CRITICAL — industry avg 35%';
+  document.getElementById('intro').classList.add('active');
+}
+</script>
+</body>
+</html>
